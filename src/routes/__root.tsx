@@ -14,6 +14,8 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { SiteNav } from "@/components/SiteNav";
 import { SiteFooter } from "@/components/SiteFooter";
 import { Toaster } from "@/components/ui/sonner";
+import favicon from "@/assets/images.png"; // or "../assets/favicon.png"
+
 
 function NotFoundComponent() {
   return (
@@ -92,6 +94,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         rel: "stylesheet",
         href: appCss,
+      },
+    ],
+    link: [
+      {
+        rel: "icon",
+        href: "/images.png",
       },
     ],
   }),
