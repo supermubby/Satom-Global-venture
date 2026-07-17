@@ -15,6 +15,10 @@ import { Route as OrderRouteImport } from './routes/order'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminOrdersRouteImport } from './routes/admin/orders'
+import { Route as AdminLoginRouteImport } from './routes/admin/login'
+import { Route as AdminCustomersRouteImport } from './routes/admin/customers'
 
 const ServicesRoute = ServicesRouteImport.update({
   id: '/services',
@@ -46,6 +50,26 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/admin/',
+  path: '/admin/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminOrdersRoute = AdminOrdersRouteImport.update({
+  id: '/admin/orders',
+  path: '/admin/orders',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminLoginRoute = AdminLoginRouteImport.update({
+  id: '/admin/login',
+  path: '/admin/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminCustomersRoute = AdminCustomersRouteImport.update({
+  id: '/admin/customers',
+  path: '/admin/customers',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -54,6 +78,10 @@ export interface FileRoutesByFullPath {
   '/order': typeof OrderRoute
   '/pricing': typeof PricingRoute
   '/services': typeof ServicesRoute
+  '/admin/customers': typeof AdminCustomersRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/admin/orders': typeof AdminOrdersRoute
+  '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -62,6 +90,10 @@ export interface FileRoutesByTo {
   '/order': typeof OrderRoute
   '/pricing': typeof PricingRoute
   '/services': typeof ServicesRoute
+  '/admin/customers': typeof AdminCustomersRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/admin/orders': typeof AdminOrdersRoute
+  '/admin': typeof AdminIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -71,12 +103,36 @@ export interface FileRoutesById {
   '/order': typeof OrderRoute
   '/pricing': typeof PricingRoute
   '/services': typeof ServicesRoute
+  '/admin/customers': typeof AdminCustomersRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/admin/orders': typeof AdminOrdersRoute
+  '/admin/': typeof AdminIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about' | '/contact' | '/order' | '/pricing' | '/services'
+  fullPaths:
+    | '/'
+    | '/about'
+    | '/contact'
+    | '/order'
+    | '/pricing'
+    | '/services'
+    | '/admin/customers'
+    | '/admin/login'
+    | '/admin/orders'
+    | '/admin/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/contact' | '/order' | '/pricing' | '/services'
+  to:
+    | '/'
+    | '/about'
+    | '/contact'
+    | '/order'
+    | '/pricing'
+    | '/services'
+    | '/admin/customers'
+    | '/admin/login'
+    | '/admin/orders'
+    | '/admin'
   id:
     | '__root__'
     | '/'
@@ -85,6 +141,10 @@ export interface FileRouteTypes {
     | '/order'
     | '/pricing'
     | '/services'
+    | '/admin/customers'
+    | '/admin/login'
+    | '/admin/orders'
+    | '/admin/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -94,6 +154,10 @@ export interface RootRouteChildren {
   OrderRoute: typeof OrderRoute
   PricingRoute: typeof PricingRoute
   ServicesRoute: typeof ServicesRoute
+  AdminCustomersRoute: typeof AdminCustomersRoute
+  AdminLoginRoute: typeof AdminLoginRoute
+  AdminOrdersRoute: typeof AdminOrdersRoute
+  AdminIndexRoute: typeof AdminIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -140,6 +204,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/': {
+      id: '/admin/'
+      path: '/admin'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/orders': {
+      id: '/admin/orders'
+      path: '/admin/orders'
+      fullPath: '/admin/orders'
+      preLoaderRoute: typeof AdminOrdersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/login': {
+      id: '/admin/login'
+      path: '/admin/login'
+      fullPath: '/admin/login'
+      preLoaderRoute: typeof AdminLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/customers': {
+      id: '/admin/customers'
+      path: '/admin/customers'
+      fullPath: '/admin/customers'
+      preLoaderRoute: typeof AdminCustomersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -150,6 +242,10 @@ const rootRouteChildren: RootRouteChildren = {
   OrderRoute: OrderRoute,
   PricingRoute: PricingRoute,
   ServicesRoute: ServicesRoute,
+  AdminCustomersRoute: AdminCustomersRoute,
+  AdminLoginRoute: AdminLoginRoute,
+  AdminOrdersRoute: AdminOrdersRoute,
+  AdminIndexRoute: AdminIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

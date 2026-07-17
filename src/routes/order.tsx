@@ -8,7 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { paymentConfig } from "@/lib/payment-config";
-import { ArrowLeft, Copy, MessageCircle, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Copy, MessageCircle, CheckCircle2, Loader2 } from "lucide-react";
+import { createOrder } from "@/lib/api/orders";
+import type { OrderCreatePayload } from "@/lib/api/orders";
 
 export const Route = createFileRoute("/order")({
   head: () => ({
@@ -51,21 +53,60 @@ const initial: FormState = {
 function OrderPage() {
   const [form, setForm] = useState<FormState>(initial);
   const [submitted, setSubmitted] = useState<FormState | null>(null);
-  const [orderId] = useState(() => `SGV-${Date.now().toString(36).toUpperCase()}`);
+  const [orderId, setOrderId] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const parsed = schema.safeParse(form);
     if (!parsed.success) {
       toast.error(parsed.error.issues[0]?.message ?? "Please check the form");
       return;
     }
-    setSubmitted(parsed.data);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    setSubmitting(true);
+
+    try {
+      // Build service description from form fields
+      const serviceDescription = [
+        `Property type: ${parsed.data.propertyType}`,
+        `System tier: ${parsed.data.systemTier}`,
+        `Budget: ${parsed.data.budget}`,
+        `Appliances: ${parsed.data.appliances}`,
+        parsed.data.notes ? `Notes: ${parsed.data.notes}` : null,
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+      // Transform frontend form data into backend OrderCreate payload
+      const payload: OrderCreatePayload = {
+        customer: {
+          full_name: parsed.data.fullName,
+          email: parsed.data.email,
+          phone_number: parsed.data.phone,
+        },
+        service_name: "Custom Solar Consultation",
+        service_description: serviceDescription,
+        installation_address: parsed.data.address,
+        state_city: "Nigeria",
+        total_price: 0,
+        special_instructions: parsed.data.notes || null,
+      };
+
+      const response = await createOrder(payload);
+      setOrderId(response.order_id);
+      setSubmitted(parsed.data);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Something went wrong. Please try again.";
+      toast.error(message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (submitted) {
-    return <PaymentInstructions order={submitted} orderId={orderId} onBack={() => setSubmitted(null)} />;
+    return <PaymentInstructions order={submitted} orderId={orderId ?? `SGV-${Date.now().toString(36).toUpperCase()}`} onBack={() => setSubmitted(null)} />;
   }
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => ({ ...f, [k]: v }));
@@ -76,7 +117,7 @@ function OrderPage() {
         <div className="mx-auto max-w-4xl px-4 py-14">
           <p className="text-sm font-semibold uppercase tracking-widest text-primary">Custom Order</p>
           <h1 className="mt-3 text-4xl md:text-5xl font-bold tracking-tight text-foreground">Design your solar system.</h1>
-          <p className="mt-4 max-w-2xl text-muted-foreground text-lg">Tell us what you need to power. We&apos;ll respond with a tailored proposal within 24 hours.</p>
+          <p className="mt-4 max-w-2xl text-muted-foreground text-lg">Tell us what you need to power. We'll respond with a tailored proposal within 24 hours.</p>
         </div>
       </section>
 
@@ -137,7 +178,16 @@ function OrderPage() {
 
           <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
             <p className="text-sm text-muted-foreground">A refundable design deposit of <span className="font-semibold text-foreground">₦{paymentConfig.consultationFeeNGN.toLocaleString()}</span> reserves your site survey.</p>
-            <Button type="submit" variant="hero" size="xl">Submit & View Payment Details</Button>
+            <Button type="submit" variant="hero" size="xl" disabled={submitting}>
+              {submitting ? (
+                <>
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                "Submit & View Payment Details"
+              )}
+            </Button>
           </div>
         </form>
       </section>
