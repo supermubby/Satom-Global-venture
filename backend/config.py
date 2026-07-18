@@ -3,16 +3,19 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DATABASE_URL: str = os.getenv(
-    "DATABASE_URL",
-    "postgresql+asyncpg://postgres:postgres@localhost:5432/satom_global",
-)
+# ── Database ────────────────────────────────────────────────────────────────────
+# In production, DATABASE_URL must be set in the environment (Render dashboard).
+# For local development, create a backend/.env file with your connection string.
+DATABASE_URL: str = os.getenv("DATABASE_URL", "")
+if not DATABASE_URL:
+    raise ValueError(
+        "DATABASE_URL environment variable is not set. "
+        "Please set it in your Render dashboard or create backend/.env with:\n"
+        "  DATABASE_URL=postgresql+asyncpg://username:password@host:5432/database"
+    )
 
 # Optional: separate sync URL for Alembic migrations if needed
-DATABASE_URL_SYNC: str = os.getenv(
-    "DATABASE_URL_SYNC",
-    "postgresql://postgres:postgres@localhost:5432/satom_global",
-)
+DATABASE_URL_SYNC: str = os.getenv("DATABASE_URL_SYNC", "")
 
 APP_TITLE: str = "Satom Global Venture API"
 APP_VERSION: str = "1.0.0"

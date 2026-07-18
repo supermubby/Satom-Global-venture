@@ -1,4 +1,5 @@
 import uuid
+import os
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
@@ -12,6 +13,18 @@ from database import get_db, init_db, async_session_factory
 from models import Customer, Order, OrderStatus
 from schemas import OrderCreate, OrderCreatedResponse, OrderSummaryResponse, CustomerResponse
 from admin_routes import router as admin_router
+
+
+# ── CORS Origins ────────────────────────────────────────────────────────────────
+# In production, set CORS_ORIGINS in your Render dashboard to a comma-separated
+# list of allowed origins, e.g.:
+#   https://satom-global-venture.vercel.app,https://your-custom-domain.com
+# For local development, the fallback covers common dev server ports.
+_CORS_ORIGINS_STR: str = os.getenv(
+    "CORS_ORIGINS",
+    "http://localhost:3000,http://localhost:5173,http://127.0.0.1:5173",
+)
+CORS_ORIGINS: list[str] = [o.strip() for o in _CORS_ORIGINS_STR.split(",") if o.strip()]
 
 
 # ── Lifespan (replaces deprecated on_event) ────────────────────────────────────
@@ -31,7 +44,7 @@ app = FastAPI(
 # ── CORS ───────────────────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:5173","https://satom-global-venture.vercel.app"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

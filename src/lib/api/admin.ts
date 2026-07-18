@@ -2,7 +2,16 @@
  * Admin API client - handles JWT auth and all admin endpoints.
  */
 
-export const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+export const API_BASE = import.meta.env.VITE_API_URL;
+
+if (!API_BASE) {
+  throw new Error(
+    "VITE_API_URL environment variable is not set. " +
+    "Please create a .env file in the project root with:\n" +
+    "  VITE_API_URL=https://your-render-backend.onrender.com\n" +
+    "(Use http://localhost:8000 for local development)"
+  );
+}
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 export interface AdminUser {
