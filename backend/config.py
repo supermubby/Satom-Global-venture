@@ -18,6 +18,6 @@ APP_TITLE: str = "Satom Global Venture API"
 APP_VERSION: str = "1.0.0"
 
 # JWT & Admin Auth
-SECRET_KEY: str = os.getenv("SECRET_KEY", "change-me-in-production-use-a-real-secret")
+SECRET_KEY = os.environ["SECRET_KEY"]
 ALGORITHM: str = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "480"))  # 8 hours
