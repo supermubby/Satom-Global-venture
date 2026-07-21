@@ -62,38 +62,17 @@ async def get_me(admin: AdminUser = Depends(get_current_admin)):
     """Return the currently authenticated admin's profile."""
     return AdminUserResponse.model_validate(admin)
 
-
-@router.post("/seed", status_code=201)
+@router.post("/seed")
 async def seed_admin(
     payload: AdminUserCreate,
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a new admin user (seeding). In production, protect this behind
-    an existing admin auth or disable it."""
-    # Check if username or email already exists
-    result = await db.execute(
-        select(AdminUser).where(
-            (AdminUser.username == payload.username) |
-            (AdminUser.email == payload.email)
-        )
-    )
-    if result.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Username or email already exists",
-        )
+    print("Reached endpoint")
 
-    admin = AdminUser(
-        username=payload.username,
-        email=payload.email,
-        hashed_password=hash_password(payload.password),
-        full_name=payload.full_name,
-    )
-    db.add(admin)
-    await db.commit()
-    await db.refresh(admin)
-    return {"message": "Admin user created", "admin_id": str(admin.id)}
+    password = hash_password(payload.password)
+    print("Password hashed")
 
+    return {"message": "Hash successful"}
 
 # ── Dashboard Stats ────────────────────────────────────────────────────────────
 @router.get("/dashboard", response_model=DashboardStats)
