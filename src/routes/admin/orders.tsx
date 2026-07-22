@@ -10,7 +10,9 @@ import {
   Loader2,
   ArrowLeft,
   Pencil,
+  CheckCircle2,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -50,6 +52,7 @@ import { Label } from "@/components/ui/label";
 import {
   getOrders,
   updateOrderStatus,
+  updateOrderStatusSimple,
   deleteOrder,
   getStoredToken,
   logout,
@@ -69,6 +72,7 @@ const ORDER_STATUS_COLORS: Record<string, string> = {
   in_progress: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400",
   completed: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
   cancelled: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+  successful: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
 };
 
 const ORDER_STATUS_OPTIONS = [
@@ -77,6 +81,11 @@ const ORDER_STATUS_OPTIONS = [
   { value: "in_progress", label: "In Progress" },
   { value: "completed", label: "Completed" },
   { value: "cancelled", label: "Cancelled" },
+];
+
+const SIMPLE_STATUS_OPTIONS = [
+  { value: "pending", label: "Pending" },
+  { value: "successful", label: "Successful" },
 ];
 
 function AdminOrdersPage() {
@@ -92,6 +101,7 @@ function AdminOrdersPage() {
   const [viewOrder, setViewOrder] = useState<OrderSummary | null>(null);
   const [editPrice, setEditPrice] = useState<string>("");
   const [savingPrice, setSavingPrice] = useState(false);
+  const [savingStatus, setSavingStatus] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!getStoredToken()) {
@@ -141,6 +151,27 @@ function AdminOrdersPage() {
 
     setFilteredOrders(result);
   }, [search, statusFilter, orders]);
+
+  const handleSimpleStatusUpdate = async (
+    orderId: string,
+    value: string
+  ) => {
+    setSavingStatus((prev) => ({ ...prev, [orderId]: true }));
+    try {
+      const result = await updateOrderStatusSimple(orderId, value);
+      setOrders((prev) =>
+        prev.map((o) => (o.id === orderId ? result.order : o))
+      );
+      if (viewOrder?.id === orderId) {
+        setViewOrder(result.order);
+      }
+      toast.success("Order status updated successfully");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update order status");
+    } finally {
+      setSavingStatus((prev) => ({ ...prev, [orderId]: false }));
+    }
+  };
 
   const handleStatusUpdate = async (
     orderId: string,
@@ -292,14 +323,35 @@ function AdminOrdersPage() {
                         ₦{order.total_price.toLocaleString()}
                       </TableCell>
                       <TableCell>
-                        <Badge
-                          variant="secondary"
-                          className={`text-xs font-medium ${
-                            ORDER_STATUS_COLORS[order.order_status] || ""
-                          }`}
-                        >
-                          {order.order_status.replace("_", " ")}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            variant="secondary"
+                            className={`text-xs font-medium ${
+                              ORDER_STATUS_COLORS[order.order_status] || ""
+                            }`}
+                          >
+                            {order.order_status.replace("_", " ")}
+                          </Badge>
+                          <Select
+                            value={order.order_status}
+                            onValueChange={(v) => handleSimpleStatusUpdate(order.id, v)}
+                            disabled={savingStatus[order.id]}
+                          >
+                            <SelectTrigger className="w-[130px] h-8 text-xs">
+                              {savingStatus[order.id] ? (
+                                <Loader2 className="size-3 animate-spin mr-1" />
+                              ) : null}
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {SIMPLE_STATUS_OPTIONS.map((opt) => (
+                                <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                                  {opt.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {formatDate(order.created_at)}

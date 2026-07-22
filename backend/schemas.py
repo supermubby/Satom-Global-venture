@@ -112,3 +112,8 @@ class DashboardStats(BaseModel):
 class OrderStatusUpdate(BaseModel):
     order_status: Optional[str] = None
     total_price: Optional[float] = None
+
+
+class OrderStatusUpdateSimple(BaseModel):
+    """Request body for the dedicated status-only PATCH endpoint."""
+    status: str = Field(..., min_length=1)

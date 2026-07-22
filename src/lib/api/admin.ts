@@ -155,6 +155,19 @@ export async function updateOrderStatus(
   });
 }
 
+export async function updateOrderStatusSimple(
+  id: string,
+  status: string
+): Promise<{ message: string; order: OrderSummary }> {
+  return request<{ message: string; order: OrderSummary }>(
+    `/api/admin/orders/${id}/status`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    }
+  );
+}
+
 export async function deleteOrder(id: string): Promise<void> {
   return request<void>(`/api/admin/orders/${id}`, {
     method: "DELETE",

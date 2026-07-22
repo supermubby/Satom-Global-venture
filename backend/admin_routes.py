@@ -19,6 +19,7 @@ from schemas import (
     DashboardStats,
     OrderSummaryResponse,
     OrderStatusUpdate,
+    OrderStatusUpdateSimple,
     CustomerResponse,
 )
 from auth import hash_password, verify_password, create_access_token, get_current_admin
@@ -248,6 +249,40 @@ async def update_order_status(
     await db.commit()
     await db.refresh(order, ["customer"])
     return await _build_order_response(order)
+
+
+@router.patch("/orders/{order_id}/status")
+async def update_order_status_only(
+    order_id: uuid.UUID,
+    payload: OrderStatusUpdateSimple,
+    admin: AdminUser = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Dedicated endpoint to update only the order status.
+    Only allows: pending, successful.
+    Returns 400 for invalid status, 404 if order not found.
+    """
+    allowed_statuses = {"pending", "successful"}
+    if payload.status not in allowed_statuses:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid status '{payload.status}'. Allowed values: {', '.join(sorted(allowed_statuses))}",
+        )
+
+    result = await db.execute(select(Order).where(Order.id == order_id))
+    order = result.scalar_one_or_none()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    order.order_status = OrderStatus(payload.status)
+    await db.commit()
+    await db.refresh(order, ["customer"])
+
+    return {
+        "message": "Order status updated successfully",
+        "order": await _build_order_response(order),
+    }
 
 
 @router.delete("/orders/{order_id}", status_code=204)

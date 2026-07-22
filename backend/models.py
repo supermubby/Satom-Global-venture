@@ -25,6 +25,7 @@ class OrderStatus(str, enum.Enum):
     in_progress = "in_progress"
     completed = "completed"
     cancelled = "cancelled"
+    successful = "successful"
 
 
 # ── Helper: UUID primary key ───────────────────────────────────────────────────
