@@ -85,7 +85,7 @@ const ORDER_STATUS_OPTIONS = [
 
 const SIMPLE_STATUS_OPTIONS = [
   { value: "pending", label: "Pending" },
-  { value: "successful", label: "Successful" },
+  { value: "completed", label: "completed" },
 ];
 
 function AdminOrdersPage() {
