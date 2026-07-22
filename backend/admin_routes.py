@@ -263,7 +263,7 @@ async def update_order_status_only(
     Only allows: pending, successful.
     Returns 400 for invalid status, 404 if order not found.
     """
-    allowed_statuses = {"pending", "successful"}
+    allowed_statuses = {"pending", "completed"}
     if payload.status not in allowed_statuses:
         raise HTTPException(
             status_code=400,
