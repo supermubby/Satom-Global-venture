@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select, func, case
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,13 +23,16 @@ from schemas import (
     CustomerResponse,
 )
 from auth import hash_password, verify_password, create_access_token, get_current_admin
+from rate_limiter import limiter
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
 
 
 # ── Auth ───────────────────────────────────────────────────────────────────────
 @router.post("/login", response_model=AdminTokenResponse)
+@limiter.limit("5/minute")
 async def admin_login(
+    request: Request,
     payload: AdminLoginRequest,
     db: AsyncSession = Depends(get_db),
 ):

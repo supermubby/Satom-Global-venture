@@ -5,6 +5,8 @@ from typing import AsyncGenerator
 
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,6 +15,7 @@ from database import get_db, init_db, async_session_factory
 from models import Customer, Order, OrderStatus
 from schemas import OrderCreate, OrderCreatedResponse, OrderSummaryResponse, CustomerResponse
 from admin_routes import router as admin_router
+from rate_limiter import limiter, rate_limit_exceeded_handler
 
 
 # ── CORS Origins ────────────────────────────────────────────────────────────────
@@ -40,6 +43,14 @@ app = FastAPI(
     version=APP_VERSION,
     lifespan=lifespan,
 )
+
+# ── Rate Limiting ───────────────────────────────────────────────────────────────
+# Wire up slowapi: attach the limiter to app.state, add the middleware that
+# intercepts requests and checks limits, and register a custom handler that
+# returns a clear JSON 429 response when a limit is exceeded.
+app.state.limiter = limiter
+app.add_middleware(SlowAPIMiddleware)
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
 # ── CORS ───────────────────────────────────────────────────────────────────────
 app.add_middleware(
