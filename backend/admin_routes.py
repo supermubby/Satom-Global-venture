@@ -1,16 +1,18 @@
 """
 Admin API routes - JWT protected admin dashboard endpoints.
 """
+import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select, func, case
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
-from models import AdminUser, Order, Customer, OrderStatus
+from models import AdminUser, LoginSecurity, Order, Customer, OrderStatus
 from schemas import (
     AdminLoginRequest,
     AdminTokenResponse,
@@ -26,6 +28,100 @@ from auth import hash_password, verify_password, create_access_token, get_curren
 from rate_limiter import limiter
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
+logger = logging.getLogger(__name__)
+
+LOGIN_LOCKOUT_FAILURE_LIMIT = 10
+LOGIN_LOCKOUT_WINDOW = timedelta(minutes=15)
+LOGIN_LOCKOUT_DURATION = timedelta(minutes=15)
+INVALID_LOGIN_MESSAGE = "Invalid username or password."
+
+
+def _client_ip(request: Request) -> str:
+    forwarded_for = request.headers.get("x-forwarded-for")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    if request.client:
+        return request.client.host
+    return "unknown"
+
+
+def _audit_login_event(
+    *,
+    username: str,
+    client_ip: str,
+    success: bool,
+    event: str,
+) -> None:
+    logger.info(
+        "admin_login_audit",
+        extra={
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "username": username,
+            "client_ip": client_ip,
+            "success": success,
+            "event": event,
+        },
+    )
+
+
+async def _get_or_create_login_security(
+    db: AsyncSession, username: str
+) -> LoginSecurity:
+    result = await db.execute(
+        select(LoginSecurity)
+        .where(LoginSecurity.username == username)
+        .with_for_update()
+    )
+    security_record = result.scalar_one_or_none()
+    if security_record:
+        return security_record
+
+    security_record = LoginSecurity(username=username)
+    db.add(security_record)
+    try:
+        await db.flush()
+        return security_record
+    except IntegrityError:
+        await db.rollback()
+        result = await db.execute(
+            select(LoginSecurity)
+            .where(LoginSecurity.username == username)
+            .with_for_update()
+        )
+        security_record = result.scalar_one()
+        return security_record
+
+
+def _is_locked(security_record: LoginSecurity, now: datetime) -> bool:
+    return bool(security_record.locked_until and security_record.locked_until > now)
+
+
+def _reset_login_security(security_record: LoginSecurity, now: datetime) -> None:
+    security_record.failed_attempts = 0
+    security_record.first_failed_attempt_at = None
+    security_record.locked_until = None
+    security_record.updated_at = now
+
+
+def _record_failed_login(
+    security_record: LoginSecurity, now: datetime, client_ip: str
+) -> bool:
+    if (
+        security_record.first_failed_attempt_at is None
+        or security_record.first_failed_attempt_at <= now - LOGIN_LOCKOUT_WINDOW
+    ):
+        security_record.failed_attempts = 1
+        security_record.first_failed_attempt_at = now
+    else:
+        security_record.failed_attempts += 1
+
+    security_record.last_failed_ip = client_ip
+    security_record.updated_at = now
+
+    if security_record.failed_attempts >= LOGIN_LOCKOUT_FAILURE_LIMIT:
+        security_record.locked_until = now + LOGIN_LOCKOUT_DURATION
+        return True
+    return False
 
 
 # ── Auth ───────────────────────────────────────────────────────────────────────
@@ -37,22 +133,74 @@ async def admin_login(
     db: AsyncSession = Depends(get_db),
 ):
     """Authenticate an admin user and return a JWT token."""
+    now = datetime.now(timezone.utc)
+    client_ip = _client_ip(request)
+    username = payload.username
+
+    security_record = await _get_or_create_login_security(db, username)
+
+    if _is_locked(security_record, now):
+        _audit_login_event(
+            username=username,
+            client_ip=client_ip,
+            success=False,
+            event="locked_login_blocked",
+        )
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=INVALID_LOGIN_MESSAGE,
+        )
+
+    if security_record.locked_until and security_record.locked_until <= now:
+        _reset_login_security(security_record, now)
+        _audit_login_event(
+            username=username,
+            client_ip=client_ip,
+            success=False,
+            event="account_unlocked",
+        )
+
     result = await db.execute(
-        select(AdminUser).where(AdminUser.username == payload.username)
+        select(AdminUser).where(AdminUser.username == username)
     )
     admin = result.scalar_one_or_none()
 
     if not admin or not verify_password(payload.password, admin.hashed_password):
+        locked = _record_failed_login(security_record, now, client_ip)
+        _audit_login_event(
+            username=username,
+            client_ip=client_ip,
+            success=False,
+            event="account_locked" if locked else "invalid_credentials",
+        )
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or password",
+            status_code=(
+                status.HTTP_429_TOO_MANY_REQUESTS
+                if locked
+                else status.HTTP_401_UNAUTHORIZED
+            ),
+            detail=INVALID_LOGIN_MESSAGE,
         )
 
     if not admin.is_active:
+        _audit_login_event(
+            username=username,
+            client_ip=client_ip,
+            success=False,
+            event="disabled_account",
+        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin account is disabled",
         )
+
+    _reset_login_security(security_record, now)
+    _audit_login_event(
+        username=username,
+        client_ip=client_ip,
+        success=True,
+        event="login_success",
+    )
 
     token = create_access_token(data={"sub": str(admin.id)})
     return AdminTokenResponse(

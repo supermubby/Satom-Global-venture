@@ -10,6 +10,8 @@ from sqlalchemy import (
     ForeignKey,
     Enum as SAEnum,
     Text,
+    Integer,
+    Index,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
@@ -109,3 +111,24 @@ class AdminUser(Base):
 
     def __repr__(self) -> str:
         return f"<AdminUser {self.username} ({self.email})>"
+
+
+# ── Login Security ─────────────────────────────────────────────────────────────
+class LoginSecurity(Base):
+    """Persistent account-based login lockout state for admin usernames."""
+    __tablename__ = "login_security"
+    __table_args__ = (
+        Index("ix_login_security_locked_until", "locked_until"),
+    )
+
+    id = uuid_pk()
+    username = Column(String(100), unique=True, nullable=False, index=True)
+    failed_attempts = Column(Integer, default=0, nullable=False)
+    first_failed_attempt_at = Column(DateTime(timezone=True), nullable=True)
+    locked_until = Column(DateTime(timezone=True), nullable=True)
+    last_failed_ip = Column(String(45), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False)
+
+    def __repr__(self) -> str:
+        return f"<LoginSecurity {self.username} attempts={self.failed_attempts}>"
