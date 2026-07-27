@@ -11,12 +11,16 @@ variable to a Redis connection string, e.g.::
 The admin login endpoint is limited to 5 attempts per minute per client IP
 to protect against brute-force attacks.
 """
+import logging
 import os
+from datetime import datetime, timezone
 
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
+
+logger = logging.getLogger(__name__)
 
 
 def get_client_ip(request: Request) -> str:
@@ -53,6 +57,27 @@ async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
 
     HTTP 429 with a descriptive message so the client knows what happened.
     """
+    client_ip = get_client_ip(request)
+    username = "unknown"
+    try:
+        body = await request.json()
+        if isinstance(body, dict):
+            username = str(body.get("username") or "unknown")
+    except Exception:
+        username = "unknown"
+
+    logger.warning(
+        "admin_login_rate_limit",
+        extra={
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "username": username,
+            "client_ip": client_ip,
+            "success": False,
+            "event": "rate_limit_exceeded",
+            "path": request.url.path,
+        },
+    )
+
     retry_after = getattr(exc, "retry_after", None)
     headers: dict[str, str] = {}
     if retry_after is not None:
