@@ -34,7 +34,7 @@ LOGIN_LOCKOUT_FAILURE_LIMIT = 10
 LOGIN_LOCKOUT_WINDOW = timedelta(minutes=15)
 LOGIN_LOCKOUT_DURATION = timedelta(minutes=15)
 INVALID_LOGIN_MESSAGE = "Invalid username or password."
-
+print("***** admin_routes.py loaded *****", flush=True)
 
 def _client_ip(request: Request) -> str:
     forwarded_for = request.headers.get("x-forwarded-for")
@@ -133,6 +133,19 @@ async def admin_login(
     db: AsyncSession = Depends(get_db),
 ):
     """Authenticate an admin user and return a JWT token."""
+    print("===== LOGIN =====", flush=True)
+    print("Username:", payload.username, flush=True)
+    print("Admin found:", admin is not None, flush=True)
+
+    if admin:
+     print("DB Username:", admin.username, flush=True)
+     print("DB Email:", admin.email, flush=True)
+     print("Stored Hash:", admin.hashed_password, flush=True)
+     print(
+        "Password Valid:",
+        verify_password(payload.password, admin.hashed_password),
+        flush=True,
+    )
     now = datetime.now(timezone.utc)
     client_ip = _client_ip(request)
     username = payload.username
@@ -164,6 +177,7 @@ async def admin_login(
         select(AdminUser).where(AdminUser.username == username)
     )
     admin = result.scalar_one_or_none()
+    
 
     if not admin or not verify_password(payload.password, admin.hashed_password):
         locked = _record_failed_login(security_record, now, client_ip)
