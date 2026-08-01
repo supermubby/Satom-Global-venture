@@ -165,9 +165,9 @@ async def admin_login(
         select(AdminUser).where(AdminUser.username == username)
     )
     admin = result.scalar_one_or_none()
-     print("===== LOGIN =====", flush=True)
-     print("Username:", payload.username, flush=True)
-     print("Admin found:", admin is not None, flush=True)
+    print("===== LOGIN =====", flush=True)
+    print("Username:", payload.username, flush=True)
+    print("Admin found:", admin is not None, flush=True)
     
     if admin:
      print("DB Username:", admin.username, flush=True)
