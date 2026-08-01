@@ -27,9 +27,3 @@ async def get_db() -> AsyncSession:
             raise
         finally:
             await session.close()
-
-
-async def init_db() -> None:
-    """Create all tables on startup (useful for development)."""
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)

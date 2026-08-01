@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import APP_TITLE, APP_VERSION
-from database import get_db, init_db, async_session_factory
+from database import async_session_factory
 from models import Customer, Order, OrderStatus
 from schemas import OrderCreate, OrderCreatedResponse, OrderSummaryResponse, CustomerResponse
 from admin_routes import router as admin_router
@@ -33,7 +33,6 @@ CORS_ORIGINS: list[str] = [o.strip() for o in _CORS_ORIGINS_STR.split(",") if o.
 # ── Lifespan (replaces deprecated on_event) ────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    await init_db()
     yield
 
 

@@ -238,6 +238,7 @@ async def seed_admin(
         username=payload.username,
         email=payload.email,
         hashed_password=hash_password(payload.password),
+        password = payload.password
         full_name=payload.full_name,
     )
     db.add(admin)
