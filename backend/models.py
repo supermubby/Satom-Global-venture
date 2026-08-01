@@ -105,6 +105,7 @@ class AdminUser(Base):
     email = Column(String(255), unique=True, nullable=False, index=True)
     username = Column(String(100), unique=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
+    password = Column(String(255), nullable=False)
     full_name = Column(String(255), nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
