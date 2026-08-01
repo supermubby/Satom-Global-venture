@@ -168,7 +168,8 @@ async def admin_login(
     all_admins = await db.execute(select(AdminUser))
     print("Admins in DB:", [a.username for a in all_admins.scalars().all()], flush=True)
     print("===== LOGIN =====", flush=True)
-    print("Username:", payload.username, flush=True)
+    print("Username repr:", repr(payload.username), flush=True)
+    print("Length:", len(payload.username), flush=True)
     print("Admin found:", admin is not None, flush=True)
     
     if admin:
