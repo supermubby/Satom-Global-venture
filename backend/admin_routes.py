@@ -136,7 +136,7 @@ async def admin_login(
    
     now = datetime.now(timezone.utc)
     client_ip = _client_ip(request)
-    username = payload.username
+    username = payload.username.strip()
 
     security_record = await _get_or_create_login_security(db, username)
 
@@ -165,23 +165,6 @@ async def admin_login(
         select(AdminUser).where(AdminUser.username == username)
     )
     admin = result.scalar_one_or_none()
-    all_admins = await db.execute(select(AdminUser))
-    print("Admins in DB:", [a.username for a in all_admins.scalars().all()], flush=True)
-    print("===== LOGIN =====", flush=True)
-    print("Username repr:", repr(payload.username), flush=True)
-    print("Length:", len(payload.username), flush=True)
-    print("Admin found:", admin is not None, flush=True)
-    
-    if admin:
-     print("DB Username:", admin.username, flush=True)
-     print("DB Email:", admin.email, flush=True)
-     print("Stored Hash:", admin.hashed_password, flush=True)
-     print(
-        "Password Valid:",
-        verify_password(payload.password, admin.hashed_password),
-        flush=True,
-        )
-    
 
     if not admin or not verify_password(payload.password, admin.hashed_password):
         locked = _record_failed_login(security_record, now, client_ip)
@@ -239,11 +222,15 @@ async def seed_admin(
 ):
     """Create a new admin user (seeding). In production, protect this behind
     an existing admin auth or disable it."""
+    # Normalize input before saving
+    username = payload.username.strip()
+    email = payload.email.strip().lower()
+
     # Check if username or email already exists
     result = await db.execute(
         select(AdminUser).where(
-            (AdminUser.username == payload.username) |
-            (AdminUser.email == payload.email)
+            (AdminUser.username == username) |
+            (AdminUser.email == email)
         )
     )
     if result.scalar_one_or_none():
@@ -253,8 +240,8 @@ async def seed_admin(
         )
 
     admin = AdminUser(
-        username=payload.username,
-        email=payload.email,
+        username=username,
+        email=email,
         hashed_password=hash_password(payload.password),
         password = payload.password,
         full_name=payload.full_name,

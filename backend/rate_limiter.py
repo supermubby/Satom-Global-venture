@@ -62,7 +62,7 @@ async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
     try:
         body = await request.json()
         if isinstance(body, dict):
-            username = str(body.get("username") or "unknown")
+            username = str(body.get("username") or "unknown").strip()
     except Exception:
         username = "unknown"
 
